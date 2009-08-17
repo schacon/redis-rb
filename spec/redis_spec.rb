@@ -455,6 +455,8 @@ describe "redis" do
     100.times do |idx|
       @r[idx].should == "foo#{idx}"
     end
+
+    @r.keys('*').sort.uniq.should == ('0'...'100').to_a.sort + ['foo']
   end
 
   it "should be able to pipeline writes" do

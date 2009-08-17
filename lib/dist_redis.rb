@@ -37,9 +37,11 @@ class DistRedis
   end
 
   def keys(glob)
-    @ring.nodes.map do |red|
-      red.keys(glob)
+    keyz = []
+    @ring.nodes.each do |red|
+      keyz.concat red.keys(glob)
     end
+    keyz
   end
 
   def save
