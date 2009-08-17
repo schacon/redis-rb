@@ -36,6 +36,14 @@ class DistRedis
     end
   end
 
+  # Ruby defines a now deprecated type method so we need to override it here
+  # since it will never hit method_missing
+  def type(key)
+    if redis = node_for_key(key)
+      redis.send :type, key
+    end
+  end
+
   def keys(glob)
     keyz = []
     @ring.nodes.each do |red|
