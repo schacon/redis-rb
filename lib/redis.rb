@@ -101,12 +101,13 @@ class Redis
   }
 
   def initialize(options = {})
-    @host    =  options[:host]    || '127.0.0.1'
-    @port    = (options[:port]    || 6379).to_i
-    @db      = (options[:db]      || 0).to_i
-    @timeout = (options[:timeout] || 5).to_i
-    @password = options[:password]
-    @logger  =  options[:logger]
+    @host      =  options[:host]    || '127.0.0.1'
+    @port      = (options[:port]    || 6379).to_i
+    @db        = (options[:db]      || 0).to_i
+    @timeout   = (options[:timeout] || 5).to_i
+    @password  = options[:password]
+    @logger    = options[:logger]
+    @namespace = options[:namespace]
 
     @logger.info { self.to_s } if @logger
     connect_to_server
@@ -197,6 +198,7 @@ class Redis
         bulk = argv[-1].to_s
         argv[-1] = bulk.respond_to?(:bytesize) ? bulk.bytesize : bulk.size
       end
+      argv[1] = "#{@namespace}:#{argv[1]}" if @namespace && argv[1]
       command << "#{argv.join(' ')}\r\n"
       command << "#{bulk}\r\n" if bulk
     end

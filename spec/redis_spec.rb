@@ -477,4 +477,12 @@ describe "redis" do
     r.connect_to_server
   end
 
+  it "should be able to use a namespace" do
+    r = Redis.new(:namespace => :ns, :db => 15)
+    r['foo'].should == nil
+    r['foo'] = 'nik'
+    r['foo'].should == 'nik'
+    @r['foo'].should == 'bar'
+  end
+
 end
