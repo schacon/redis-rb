@@ -479,10 +479,15 @@ describe "redis" do
 
   it "should be able to use a namespace" do
     r = Redis.new(:namespace => :ns, :db => 15)
+
     r['foo'].should == nil
     r['foo'] = 'nik'
     r['foo'].should == 'nik'
     @r['foo'].should == 'bar'
+
+    r.incr('counter', 2)
+    r['counter'].to_i.should == 2
+    @r['counter'].should == nil
   end
 
 end
