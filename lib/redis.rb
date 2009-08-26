@@ -160,7 +160,7 @@ class Redis
     call_command(argv)
   end
 
-  def call_command(argv)
+  def call_command(argv, use_namespace = true)
     @logger.debug { argv.inspect } if @logger
 
     # this wrapper to raw_call_command handle reconnection on socket
@@ -169,7 +169,7 @@ class Redis
     connect_to_server if !@sock
 
     begin
-      raw_call_command(argv.dup)
+      raw_call_command(argv.dup, use_namespace)
     rescue Errno::ECONNRESET, Errno::EPIPE
       @sock.close
       @sock = nil
@@ -178,7 +178,7 @@ class Redis
     end
   end
 
-  def raw_call_command(argvp)
+  def raw_call_command(argvp, use_namespace = true)
     pipeline = argvp[0].is_a?(Array)
 
     unless pipeline
@@ -198,7 +198,11 @@ class Redis
         bulk = argv[-1].to_s
         argv[-1] = bulk.respond_to?(:bytesize) ? bulk.bytesize : bulk.size
       end
-      argv[1] = "#{@namespace}:#{argv[1]}" if @namespace && argv[1]
+
+      if @namespace && argv[1] && use_namespace
+        argv[1] = "#{@namespace}:#{argv[1]}"
+      end
+
       command << "#{argv.join(' ')}\r\n"
       command << "#{bulk}\r\n" if bulk
     end
@@ -256,6 +260,11 @@ class Redis
       key = keys.shift
       value.nil? ? hash : hash.merge(key => value)
     end
+  end
+
+  def mget(*keys)
+    keys = keys.map { |key| "#{@namespace}:#{key}"} if @namespace
+    call_command([:mget] + keys, false)
   end
 
   # Ruby defines a now deprecated type method so we need to override it here
