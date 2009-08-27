@@ -23,7 +23,7 @@ describe "redis" do
   end
 
   after(:each) do
-    @r.keys('*').each {|k| @r.del k}
+    @r.flushdb
   end
 
   after(:all) do
@@ -479,11 +479,13 @@ describe "redis" do
 
   it "should be able to use a namespace" do
     r = Redis.new(:namespace => :ns, :db => 15)
+    r.flushdb
 
     r['foo'].should == nil
-    r['foo'] = 'nik'
-    r['foo'].should == 'nik'
-    @r['foo'].should == 'bar'
+    r['foo'] = 'chris'
+    r['foo'].should == 'chris'
+    @r['foo'] = 'bob'
+    @r['foo'].should == 'bob'
 
     r.incr('counter', 2)
     r['counter'].to_i.should == 2
@@ -495,8 +497,8 @@ describe "redis" do
 
     r['foo'] = 1000
     r['bar'] = 2000
-    r.mapped_mget('foo', 'bar').should == { 'foo' => '1000', 'bar' => '2000'}
-    r.mapped_mget('foo', 'baz', 'bar').should == { 'foo' => '1000', 'bar' => '2000'}
+    r.mapped_mget('foo', 'bar').should == { 'foo' => '1000', 'bar' => '2000' }
+    r.mapped_mget('foo', 'baz', 'bar').should == { 'foo' => '1000', 'bar' => '2000' }
   end
 
 end
