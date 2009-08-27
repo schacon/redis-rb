@@ -110,7 +110,6 @@ class Redis
     @namespace = options[:namespace]
 
     @logger.info { self.to_s } if @logger
-    connect_to_server
   end
 
   def to_s
