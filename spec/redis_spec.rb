@@ -30,7 +30,7 @@ describe "redis" do
   end
 
   after(:each) do
-    @r.keys('*').each {|k| @r.del k}
+    @r.flushdb
   end
 
   after(:all) do
@@ -466,6 +466,8 @@ describe "redis" do
     100.times do |idx|
       @r[idx].should == "foo#{idx}"
     end
+
+    @r.keys('*').sort.uniq.should == ('0'...'100').to_a.sort + ['foo']
   end
 
   it "should be able to pipeline writes" do
@@ -484,6 +486,30 @@ describe "redis" do
     r.stub!(:connect_to)
     r.should_receive(:call_command).with(['auth', 'secret'])
     r.connect_to_server
+  end
+
+  it "should be able to use a namespace" do
+    r = Redis.new(:namespace => :ns, :db => 15)
+    r.flushdb
+
+    r['foo'].should == nil
+    r['foo'] = 'chris'
+    r['foo'].should == 'chris'
+    @r['foo'] = 'bob'
+    @r['foo'].should == 'bob'
+
+    r.incr('counter', 2)
+    r['counter'].to_i.should == 2
+    @r['counter'].should == nil
+  end
+
+  it "should be able to use a namespace with mget" do
+    r = Redis.new(:namespace => :ns, :db => 15)
+
+    r['foo'] = 1000
+    r['bar'] = 2000
+    r.mapped_mget('foo', 'bar').should == { 'foo' => '1000', 'bar' => '2000' }
+    r.mapped_mget('foo', 'baz', 'bar').should == { 'foo' => '1000', 'bar' => '2000' }
   end
 
 end

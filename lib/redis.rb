@@ -101,16 +101,16 @@ class Redis
   }
 
   def initialize(options = {})
-    @host    =  options[:host]    || '127.0.0.1'
-    @port    = (options[:port]    || 6379).to_i
-    @db      = (options[:db]      || 0).to_i
-    @timeout = (options[:timeout] || 5).to_i
-    @password = options[:password]
-    @logger  =  options[:logger]
+    @host        = options[:host]     || '127.0.0.1'
+    @port        = (options[:port]    || 6379).to_i
+    @db          = (options[:db]      || 0).to_i
+    @timeout     = (options[:timeout] || 5).to_i
+    @password    = options[:password]
+    @logger      = options[:logger]
+    @namespace   = options[:namespace]
     @thread_safe = options[:thread_safe]
 
     @logger.info { self.to_s } if @logger
-    connect_to_server
   end
 
   def to_s
@@ -160,7 +160,7 @@ class Redis
     call_command(argv)
   end
 
-  def call_command(argv)
+  def call_command(argv, use_namespace = true)
     @logger.debug { argv.inspect } if @logger
 
     # this wrapper to raw_call_command handle reconnection on socket
@@ -169,7 +169,7 @@ class Redis
     connect_to_server if !@sock
 
     begin
-      raw_call_command(argv.dup)
+      raw_call_command(argv.dup, use_namespace)
     rescue Errno::ECONNRESET, Errno::EPIPE
       @sock.close
       @sock = nil
@@ -178,7 +178,7 @@ class Redis
     end
   end
 
-  def raw_call_command(argvp)
+  def raw_call_command(argvp, use_namespace = true)
     pipeline = argvp[0].is_a?(Array)
 
     unless pipeline
@@ -198,10 +198,15 @@ class Redis
         bulk = argv[-1].to_s
         argv[-1] = bulk.respond_to?(:bytesize) ? bulk.bytesize : bulk.size
       end
+
+      if @namespace && argv[1] && use_namespace
+        argv[1] = "#{@namespace}:#{argv[1]}"
+      end
+
       command << "#{argv.join(' ')}\r\n"
       command << "#{bulk}\r\n" if bulk
     end
-    
+
     results = if @thread_safe
       with_mutex { process_command(command, argvv) }
     else
@@ -210,7 +215,7 @@ class Redis
 
     return pipeline ? results : results[0]
   end
-  
+
   def process_command(command, argvv)
     @sock.write(command)
     argvv.map do |argv|
@@ -218,7 +223,7 @@ class Redis
       processor ? processor.call(read_reply) : read_reply
     end
   end
-  
+
   def with_mutex(&block)
     @mutex ||= Mutex.new
     @mutex.synchronize &block
@@ -269,6 +274,11 @@ class Redis
       result.merge!(key => value) unless value.nil?
     end
     result
+  end
+
+  def mget(*keys)
+    keys = keys.map { |key| "#{@namespace}:#{key}"} if @namespace
+    call_command([:mget] + keys, false)
   end
 
   # Ruby defines a now deprecated type method so we need to override it here
