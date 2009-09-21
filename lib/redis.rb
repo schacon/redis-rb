@@ -101,13 +101,14 @@ class Redis
   }
 
   def initialize(options = {})
-    @host      =  options[:host]    || '127.0.0.1'
-    @port      = (options[:port]    || 6379).to_i
-    @db        = (options[:db]      || 0).to_i
-    @timeout   = (options[:timeout] || 5).to_i
-    @password  = options[:password]
-    @logger    = options[:logger]
-    @namespace = options[:namespace]
+    @host        = options[:host]     || '127.0.0.1'
+    @port        = (options[:port]    || 6379).to_i
+    @db          = (options[:db]      || 0).to_i
+    @timeout     = (options[:timeout] || 5).to_i
+    @password    = options[:password]
+    @logger      = options[:logger]
+    @namespace   = options[:namespace]
+    @thread_safe = options[:thread_safe]
 
     @logger.info { self.to_s } if @logger
   end
@@ -206,14 +207,26 @@ class Redis
       command << "#{bulk}\r\n" if bulk
     end
 
-    @sock.write(command)
-
-    results = argvv.map do |argv|
-      processor = REPLY_PROCESSOR[argv[0]]
-      processor ? processor.call(read_reply) : read_reply
+    results = if @thread_safe
+      with_mutex { process_command(command, argvv) }
+    else
+      process_command(command, argvv)
     end
 
     return pipeline ? results : results[0]
+  end
+
+  def process_command(command, argvv)
+    @sock.write(command)
+    argvv.map do |argv|
+      processor = REPLY_PROCESSOR[argv[0]]
+      processor ? processor.call(read_reply) : read_reply
+    end
+  end
+
+  def with_mutex(&block)
+    @mutex ||= Mutex.new
+    @mutex.synchronize &block
   end
 
   def select(*args)
