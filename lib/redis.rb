@@ -255,10 +255,12 @@ class Redis
   # Similar to memcache.rb's #get_multi, returns a hash mapping
   # keys to values.
   def mapped_mget(*keys)
-    mget(*keys).inject({}) do |hash, value|
+    result = {}
+    mget(*keys).each do |value|
       key = keys.shift
-      value.nil? ? hash : hash.merge(key => value)
+      result.merge!(key => value) unless value.nil?
     end
+    result
   end
 
   def mget(*keys)
