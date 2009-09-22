@@ -33,4 +33,18 @@ Use the tasks mentioned above (in Dependencies) to get your machine setup.
 
 ## Examples
 
-Check the examples/ directory.  *Note* you need to have redis-server running first.
+Check the examples/ directory.  *Note* you need to have redis-server
+running first.
+
+## Differences from ezmobius/redis-rb
+
+* Connection is deferred until you use the library. a420731
+* You may pass `:namespace` to the initializer to scope all keys. 73b9ae3
+* You may pass `:thread_safe` to the initializer to make Redis thread 
+  safe. 1d0c44c
+
+I will continue to merge in changes from ezmobius/redis-rb.
+
+## Installation
+
+    gem install defunkt-redis
