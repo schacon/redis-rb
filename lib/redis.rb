@@ -107,7 +107,6 @@ class Redis
     @timeout     = (options[:timeout] || 5).to_i
     @password    = options[:password]
     @logger      = options[:logger]
-    @namespace   = options[:namespace]
     @thread_safe = options[:thread_safe]
 
     @logger.info { self.to_s } if @logger
@@ -160,7 +159,7 @@ class Redis
     call_command(argv)
   end
 
-  def call_command(argv, use_namespace = true)
+  def call_command(argv)
     @logger.debug { argv.inspect } if @logger
 
     # this wrapper to raw_call_command handle reconnection on socket
@@ -169,7 +168,7 @@ class Redis
     connect_to_server if !@sock
 
     begin
-      raw_call_command(argv.dup, use_namespace)
+      raw_call_command(argv.dup)
     rescue Errno::ECONNRESET, Errno::EPIPE
       @sock.close
       @sock = nil
@@ -178,7 +177,7 @@ class Redis
     end
   end
 
-  def raw_call_command(argvp, use_namespace = true)
+  def raw_call_command(argvp)
     pipeline = argvp[0].is_a?(Array)
 
     unless pipeline
@@ -197,10 +196,6 @@ class Redis
       if BULK_COMMANDS[argv[0]] and argv.length > 1
         bulk = argv[-1].to_s
         argv[-1] = bulk.respond_to?(:bytesize) ? bulk.bytesize : bulk.size
-      end
-
-      if @namespace && argv[1] && use_namespace
-        argv[1] = "#{@namespace}:#{argv[1]}"
       end
 
       command << "#{argv.join(' ')}\r\n"
@@ -274,11 +269,6 @@ class Redis
       result.merge!(key => value) unless value.nil?
     end
     result
-  end
-
-  def mget(*keys)
-    keys = keys.map { |key| "#{@namespace}:#{key}"} if @namespace
-    call_command([:mget] + keys, false)
   end
 
   # Ruby defines a now deprecated type method so we need to override it here

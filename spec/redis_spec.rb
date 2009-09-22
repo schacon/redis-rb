@@ -1,5 +1,6 @@
 require File.dirname(__FILE__) + '/spec_helper'
 require 'redis/raketasks'
+require 'redis/namespace'
 require 'logger'
 
 class Foo
@@ -489,7 +490,7 @@ describe "redis" do
   end
 
   it "should be able to use a namespace" do
-    r = Redis.new(:namespace => :ns, :db => 15)
+    r = Redis::Namespace.new(:ns, :redis => @r)
     r.flushdb
 
     r['foo'].should == nil
@@ -504,7 +505,7 @@ describe "redis" do
   end
 
   it "should be able to use a namespace with mget" do
-    r = Redis.new(:namespace => :ns, :db => 15)
+    r = Redis::Namespace.new(:ns, :redis => @r)
 
     r['foo'] = 1000
     r['bar'] = 2000
