@@ -2,6 +2,8 @@
 
 A ruby client library for the redis key value storage system.
 
+test
+
 ## Information about redis
 
 Redis is a key value store with some interesting features:
